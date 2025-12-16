@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>積みコン管理アプリ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container py-4">
+    <h1 class="mb-4">積みコン管理</h1>
+
+    <div class="mb-3 text-end">
+        <a href="{{ url_for('manage_categories') }}" class="btn btn-secondary btn-sm">カテゴリを管理する</a>
+    </div>
+
+    <div class="card mb-4 p-3 bg-light">
+        <h5>新規追加</h5>
+        <form method="POST" action="/">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" name="title" class="form-control" placeholder="タイトル (最大127文字)" maxlength="127" required>
+                </div>
+                <div class="col-md-2">
+                    <select name="category_id" class="form-select">
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" name="memo" class="form-control" placeholder="メモ (最大255文字)" maxlength="255">
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="is_owned" id="checkOwned">
+                        <label class="form-check-label" for="checkOwned">入手済み</label>
+                    </div>
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary w-100">追加</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="d-flex justify-content-between mb-3 align-items-center">
+        <form method="GET" action="/" class="d-flex">
+            <select name="filter_category_id" class="form-select me-2" onchange="this.form.submit()">
+                <option value="">全てのカテゴリを表示</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}" {% if current_filter == cat.id|string %}selected{% endif %}>
+                    {{ cat.name }}のみ
+                </option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="sort" value="{{ current_sort }}">
+        </form>
+
+        <div class="btn-group">
+            <span class="me-2 align-self-center">並び替え:</span>
+            <a href="/?sort=id&filter_category_id={{ current_filter or '' }}" class="btn btn-outline-secondary btn-sm {% if current_sort == 'id' %}active{% endif %}">登録順</a>
+            <a href="/?sort=title&filter_category_id={{ current_filter or '' }}" class="btn btn-outline-secondary btn-sm {% if current_sort == 'title' %}active{% endif %}">タイトル</a>
+            <a href="/?sort=category&filter_category_id={{ current_filter or '' }}" class="btn btn-outline-secondary btn-sm {% if current_sort == 'category' %}active{% endif %}">カテゴリ</a>
+            <a href="/?sort=is_owned&filter_category_id={{ current_filter or '' }}" class="btn btn-outline-secondary btn-sm {% if current_sort == 'is_owned' %}active{% endif %}">入手状況</a>
+        </div>
+    </div>
+
+    <table class="table table-striped table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>状況</th>
+                <th>タイトル</th>
+                <th>カテゴリ</th>
+                <th>メモ</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for content in contents %}
+            <tr>
+                <td class="text-center">
+                    {% if content.is_owned %}
+                    <span class="badge bg-success">入手済</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">未入手</span>
+                    {% endif %}
+                </td>
+                <td>{{ content.title }}</td>
+                <td>{{ content.category.name }}</td>
+                <td>{{ content.memo }}</td>
+                <td>
+                    <a href="{{ url_for('delete', id=content.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('本当に削除しますか？');">削除</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="text-center text-muted">データがありません</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
