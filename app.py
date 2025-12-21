@@ -1,11 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import case
+import sys # エラー内容を表示するために追加
 
 app = Flask(__name__)
 
-# データベース接続設定 (docker-composeで設定した情報)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://user:password@localhost:5432/content_db'
+# データベース接続設定
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://user:password@localhost:5432/content_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -15,15 +15,15 @@ class Category(db.Model):
     __tablename__ = 'categories'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
-    # カテゴリが削除されたら、紐づくコンテンツも削除する設定 (cascade)
+    # カスケード削除の設定: カテゴリが消えたら中身も消える
     contents = db.relationship('Content', backref='category', cascade="all, delete")
 
 class Content(db.Model):
     __tablename__ = 'contents'
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(127), nullable=False) # タイトル最大127文字
-    memo = db.Column(db.String(255))                  # メモ最大255文字
-    is_owned = db.Column(db.Boolean, default=False)   # 入手済みか否か
+    title = db.Column(db.String(127), nullable=False)
+    memo = db.Column(db.String(255))
+    is_owned = db.Column(db.Boolean, default=False)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
 
 # --- 初期データ投入 ---
@@ -32,10 +32,15 @@ def initialize_db():
         db.create_all()
         # カテゴリが空なら初期データを投入
         if not Category.query.first():
-            defaults = ["アニメ", "漫画", "小説", "映画", "ゲーム"]
-            for name in defaults:
-                db.session.add(Category(name=name))
-            db.session.commit()
+            try:
+                defaults = ["アニメ", "漫画", "小説", "映画", "ゲーム"]
+                for name in defaults:
+                    db.session.add(Category(name=name))
+                db.session.commit()
+                print("初期データの投入に成功しました。")
+            except Exception as e:
+                db.session.rollback() # 失敗したら取り消す
+                print(f"初期データの投入に失敗しました: {e}", file=sys.stderr)
 
 # --- ルーティング ---
 
@@ -46,36 +51,38 @@ def index():
         title = request.form.get('title')
         category_id = request.form.get('category_id')
         memo = request.form.get('memo')
-        is_owned = 'is_owned' in request.form # チェックボックスが入っているか
+        is_owned = 'is_owned' in request.form
 
         if title and category_id:
-            new_content = Content(title=title, category_id=category_id, memo=memo, is_owned=is_owned)
-            db.session.add(new_content)
-            db.session.commit()
+            # === トランザクション処理開始 ===
+            try:
+                new_content = Content(title=title, category_id=category_id, memo=memo, is_owned=is_owned)
+                db.session.add(new_content)
+                db.session.commit() # ここで確定
+            except Exception as e:
+                db.session.rollback() # エラーが出たら無かったことにする
+                print(f"データの追加に失敗しました: {e}", file=sys.stderr)
+            # === トランザクション処理終了 ===
+            
         return redirect(url_for('index'))
 
     # --- データの取得とフィルタリング・ソート ---
-    
-    # クエリパラメータの取得
     filter_category_id = request.args.get('filter_category_id')
-    sort_by = request.args.get('sort', 'id') # デフォルトはID順
+    sort_by = request.args.get('sort', 'id')
 
     query = Content.query
 
-    # フィルタリング
     if filter_category_id:
         query = query.filter_by(category_id=filter_category_id)
 
-    # ソート (入手済み、カテゴリ、タイトルなどで並び替え)
     if sort_by == 'title':
         query = query.order_by(Content.title)
     elif sort_by == 'category':
         query = query.join(Category).order_by(Category.name)
     elif sort_by == 'is_owned':
-        # 入手済みを上に
         query = query.order_by(Content.is_owned.desc())
     else:
-        query = query.order_by(Content.id.desc()) # デフォルトは新しい順
+        query = query.order_by(Content.id.desc())
 
     contents = query.all()
     categories = Category.query.all()
@@ -85,21 +92,34 @@ def index():
 
 @app.route('/delete/<int:id>')
 def delete(id):
-    content = Content.query.get_or_404(id)
-    db.session.delete(content)
-    db.session.commit()
+    # === トランザクション処理開始 ===
+    try:
+        content = Content.query.get_or_404(id)
+        db.session.delete(content)
+        db.session.commit() # 削除を確定
+    except Exception as e:
+        db.session.rollback() # 失敗したら元に戻す
+        print(f"削除に失敗しました: {e}", file=sys.stderr)
+    # === トランザクション処理終了 ===
+    
     return redirect(url_for('index'))
 
 @app.route('/categories', methods=['GET', 'POST'])
 def manage_categories():
     if request.method == 'POST':
-        # カテゴリ追加
         name = request.form.get('name')
         if name:
-            existing = Category.query.filter_by(name=name).first()
-            if not existing:
-                db.session.add(Category(name=name))
-                db.session.commit()
+            # === トランザクション処理開始 ===
+            try:
+                existing = Category.query.filter_by(name=name).first()
+                if not existing:
+                    db.session.add(Category(name=name))
+                    db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                print(f"カテゴリ追加に失敗しました: {e}", file=sys.stderr)
+            # === トランザクション処理終了 ===
+
         return redirect(url_for('manage_categories'))
     
     categories = Category.query.all()
@@ -107,9 +127,18 @@ def manage_categories():
 
 @app.route('/categories/delete/<int:id>')
 def delete_category(id):
-    category = Category.query.get_or_404(id)
-    db.session.delete(category)
-    db.session.commit()
+    # === トランザクション処理開始 ===
+    try:
+        category = Category.query.get_or_404(id)
+        # cascade設定により、カテゴリを消すと紐づくコンテンツも自動で消える
+        # これら全てが「1つのトランザクション」として処理される
+        db.session.delete(category)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback() # 失敗したらカテゴリもコンテンツも復活（削除取り消し）
+        print(f"カテゴリ削除に失敗しました: {e}", file=sys.stderr)
+    # === トランザクション処理終了 ===
+    
     return redirect(url_for('manage_categories'))
 
 if __name__ == '__main__':
