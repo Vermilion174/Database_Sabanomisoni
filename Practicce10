@@ -11,12 +11,9 @@
 https://drive.google.com/file/d/1ZsPCk0dzmmXBykqx_6TdJ4ISjjIWaE7b/view?usp=sharing
 
 ER図
-mainブランチのpractice10_ER.pngを参照のこと
-
-
+mainブランチのDB_ER.pngを参照のこと
 
 DB構成
-
 categories
 id:int 主キー
 name:string
