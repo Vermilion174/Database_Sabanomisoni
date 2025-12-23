@@ -7,4 +7,22 @@
 2442096林淑怡
 
 ER図
-データベース構成など
+
+
+
+
+DB構成
+
+categories
+id:int 主キー
+name:string
+
+contents
+id:int主キー
+title:string(127), NOTNULL
+memo:string(255), NOTNULL
+is_owned:Boolen, default = FALSE
+
+
+
+
