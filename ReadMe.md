@@ -46,13 +46,6 @@
 
 ## セットアップ手順
 
-### 1. リポジトリをクローン
-
-```bash
-git clone https://github.com/yourname/tsumicon.git
-cd tsumicon
-
-
 ---
 
 ## システム構成
@@ -113,3 +106,10 @@ cd tsumicon
 │  ・PostgreSQL コンテナ                          │
 │  ・docker-compose による起動・停止管理          │
 └──────────────────────────────────────────────┘
+
+---
+
+## ER図
+<img width="900" height="881" alt="image" src="https://github.com/user-attachments/assets/7a0d023e-e3d0-43f3-a8e9-f3f060e6fcdf" />
+
+
