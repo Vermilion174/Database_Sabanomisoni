@@ -34,6 +34,9 @@
 
 ---
 
+##イメージ
+<img width="1046" height="577" alt="image" src="https://github.com/user-attachments/assets/2f9a5c3a-cefb-405e-9ed9-977597375114" />
+
 ## 技術スタック
 
 - Python 3.x
