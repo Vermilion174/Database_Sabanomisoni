@@ -47,15 +47,18 @@
 
 ---
 
-## セットアップ手順
-
----
-
 ## システム構成図
+<img width="1286" height="552" alt="スクリーンショット (203)" src="https://github.com/user-attachments/assets/334025fa-e4e4-45c5-a787-136cd3138c20" />
 
 ---
 
 ## ER図
 <img width="900" height="881" alt="image" src="https://github.com/user-attachments/assets/7a0d023e-e3d0-43f3-a8e9-f3f060e6fcdf" />
+
+---
+
+## 提出用ファイル
+発表スライドpdf（1ページ目にグループメンバの学籍番号、氏名を記載）
+
 
 
